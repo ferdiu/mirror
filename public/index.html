@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title></title>
+</head>
+<body>
+    <button id="start-stream">Start streaming</button>
+    <video id="video" autoplay muted></video>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Connect to the signaling server
+        const socket = io();
+
+        // Enable debug logging
+        const debug = true;
+
+        // Local video stream
+        let localStream = null;
+
+        // Create a new RTCPeerConnection
+        const peerConnection = new RTCPeerConnection();
+
+        // Get the video element
+        const video = document.getElementById('video');
+
+        // Display remote stream
+        peerConnection.ontrack = event => {
+            if (debug) {
+                console.log("Received streaming video");
+            }
+            video.srcObject = event.streams[0];
+        };
+
+        // Send ICE candidates to the other peer
+        peerConnection.onicecandidate = event => {
+            if (event.candidate) {
+                socket.emit('candidate', event.candidate);
+            }
+        };
+
+        // Receive ICE candidates from the other peer
+        socket.on('candidate', candidate => {
+            peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        });
+
+        // Receive SDP offer from the other peer
+        socket.on('offer', offer => {
+            if (debug) {
+                console.log("Received offer");
+            }
+            peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+            // Create and send an answer
+            peerConnection.createAnswer().then(answer => {
+                peerConnection.setLocalDescription(answer);
+                socket.emit('answer', answer);
+            });
+        });
+
+        // Receive SDP answer from the other peer
+        socket.on('answer', answer => {
+            if (debug) {
+                console.log("Received answer");
+            }
+            peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        });
+
+        // Create an SDP offer
+        function createOffer() {
+            if (debug) {
+                console.log("Creating offer");
+            }
+            peerConnection.createOffer().then(offer => {
+                peerConnection.setLocalDescription(offer);
+                socket.emit('offer', offer);
+            });
+        }
+
+        // Check whether we are broadcaster or not
+        function isBroadcaster() {
+            return localStream !== null;
+        }
+
+        // Chech whether somebody is broadcasting or not
+        function isViewing() {
+            return video.srcObject !== null;
+        }
+
+        // Start streaming
+        function startStreamingRequest() {
+            if (debug) {
+                console.log("Sending broadcast request");
+            }
+            socket.emit('broadcast');
+        }
+
+        socket.on('broadcast-accepted', () => {
+            if (debug) {
+                console.log("Boradcast request accepted: starting...");
+            }
+            // Get local display media stream (video only)
+            navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
+                .then(stream => {
+                    // Display local stream
+                    localStream = stream;
+                    // Add tracks to peer connection
+                    stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+                    // Create an SDP offer
+                    // createOffer();
+                });
+        });
+
+        socket.on('broadcast-rejected', () => {
+            if (debug) {
+                console.log("Boradcast request rejected");
+            }
+        });
+
+        socket.on('broadcasting', () => {
+            if (!isBroadcaster()) {
+                if (debug) {
+                    console.log("Someone is broadcasting");
+                }
+                // Create an SDP offer
+                createOffer();
+            }
+        });
+
+        socket.on('broadcasting-stopped', () => {
+            if (debug) {
+                console.log("Someone stopped broadcasting");
+            }
+            // Stop viewing
+            video.srcObject = null;
+        });
+
+        socket.on('new-viewer', () => {
+            if (isBroadcaster()) {
+                if (debug) {
+                    console.log("New viewer");
+                }
+            }
+        });
+
+        // Stop streaming
+        function stopStreaming() {
+            // Stop local stream
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+            // Tell the server to stop broadcasting
+            socket.emit('stop-broadcast');
+        }
+
+        peerConnection.onnegotiationneeded = createOffer;
+
+        // Log ICE connection state changes
+        peerConnection.oniceconnectionstatechange = () => {
+            if (debug) {
+                console.log('ICE Connection State Change:', peerConnection.iceConnectionState);
+            }
+        };
+
+        // Log signaling state changes
+        peerConnection.onsignalingstatechange = () => {
+            if (debug) {
+                console.log('Signaling State Change:', peerConnection.signalingState);
+            }
+        };
+
+        // Log connection state changes
+        peerConnection.onconnectionstatechange = () => {
+            if (debug) {
+                console.log('Connection State Change:', peerConnection.connectionState);
+            }
+        };
+
+        // Add functions to buttons
+        document.getElementById('start-stream').addEventListener('click', startStreamingRequest);
+
+        // Tell the server the page is ready!
+        window.onload = () => {
+            if (debug) {
+                console.log("Page is ready!");
+            }
+            socket.emit('im-ready');
+        }
+    </script>
+</body>
+</html>
