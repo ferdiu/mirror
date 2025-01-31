@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "ts-node src/app.ts",
+    "build": "tsc"
   },
   "author": "",
   "license": "ISC",
@@ -13,5 +14,13 @@
     "express": "^4.21.2",
     "socket.io": "^4.8.1",
     "uuid": "^11.0.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.12.0",
+    "@types/socket.io": "^3.0.1",
+    "@types/uuid": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
   }
 }
