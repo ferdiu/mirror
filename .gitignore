@@ -134,3 +134,9 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# .env files
+.env
+
+# ignore generated client files
+public/js/generated

@@ -1,0 +1,41 @@
+body {
+    font-family: Arial, sans-serif;
+    font-size: xx-large;
+    background-color: black;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+}
+
+#container {
+    text-align: center;
+}
+
+video {
+    width: 80%;
+    max-width: 600px;
+    margin-top: 20px;
+    border-radius: 8px;
+}
+
+.button {
+    background-color: #884590;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: xx-large;
+}
+
+.button.center {
+    margin-top: 25%;
+}
+
+.button:disabled {
+    background-color: #aaa;
+    cursor: not-allowed;
+}
