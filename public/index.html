@@ -2,11 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+<link rel="stylesheet" href="style.css">
 <title></title>
 </head>
 <body>
-    <button id="start-stream">Start streaming</button>
-    <video id="video" autoplay muted></video>
+    <div id="container">
+        <button id="start-stream" class="center" style="margin-top: 25%;">Start streaming</button>
+        <video id="video" autoplay muted></video>
+    </div>
+    <button id="stop-stream" class="stop" style="display: none">Stop streaming</button>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -31,6 +37,8 @@
                 console.log("Received streaming video");
             }
             video.srcObject = event.streams[0];
+            // Update UI
+            updateUI()
         };
 
         // Send ICE candidates to the other peer
@@ -108,6 +116,8 @@
                     stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
                     // Create an SDP offer
                     // createOffer();
+                    // Update UI
+                    updateUI()
                 });
         });
 
@@ -125,6 +135,8 @@
                 // Create an SDP offer
                 createOffer();
             }
+            // Update UI
+            updateUI()
         });
 
         socket.on('broadcasting-stopped', () => {
@@ -133,6 +145,8 @@
             }
             // Stop viewing
             video.srcObject = null;
+            // Update UI
+            updateUI()
         });
 
         socket.on('new-viewer', () => {
@@ -150,6 +164,8 @@
             localStream = null;
             // Tell the server to stop broadcasting
             socket.emit('stop-broadcast');
+            // Update UI
+            updateUI()
         }
 
         peerConnection.onnegotiationneeded = createOffer;
@@ -177,6 +193,7 @@
 
         // Add functions to buttons
         document.getElementById('start-stream').addEventListener('click', startStreamingRequest);
+        document.getElementById('stop-stream').addEventListener('click', stopStreaming);
 
         // Tell the server the page is ready!
         window.onload = () => {
@@ -184,6 +201,21 @@
                 console.log("Page is ready!");
             }
             socket.emit('im-ready');
+            // Update UI
+            updateUI()
+        }
+
+        function updateUI() {
+            if (isViewing()) {
+                document.getElementById('start-stream').style.display = 'none';
+                document.getElementById('stop-stream').style.display = 'none';
+            } else if (isBroadcaster()) {
+                document.getElementById('start-stream').style.display = 'none';
+                document.getElementById('stop-stream').style.display = 'block';
+            } else {
+                document.getElementById('start-stream').style.display = 'block';
+                document.getElementById('stop-stream').style.display = 'none';
+            }
         }
     </script>
 </body>
