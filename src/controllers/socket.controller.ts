@@ -48,7 +48,6 @@ export const registerSocketEvents = (io: Server) => {
         peerService.setBroadcasterId(null);
         // Tell other peers broadcasting has stopped
         socket.broadcast.emit("broadcasting-stopped");
-        socket.emit("broadcasting-stopped");
         socket.broadcast.emit("status", "idle");
         socket.emit("status", "idle");
       }
@@ -77,7 +76,11 @@ export const registerSocketEvents = (io: Server) => {
     // Handle "I'm ready" event (borwser page loaded)
     socket.on("im-ready", () => {
       // Tell other peers a new peer has joined
-      socket.broadcast.emit("peer-connected", peerId);
+      socket.broadcast.emit(
+        "peer-connected",
+        peerId,
+        peerService.getBroadcasterId()
+      );
       socket.emit("ok-you-are-ready", peerId);
 
       // If somene is broadcasting...

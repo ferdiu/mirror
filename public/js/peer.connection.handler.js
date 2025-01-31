@@ -6,7 +6,6 @@ import { socket, requestStatusUpdate } from './signaling.handler.js';
  *******************************************************************/
 
 let localPeerId = null;
-const localConnection = new RTCPeerConnection();
 const peerConnections = {};
 
 
@@ -15,41 +14,28 @@ const peerConnections = {};
  *******************************************************************/
 
 /**
- * Handles the reception of an ICE candidate from the signaling server.
- * Adds the candidate to the peer connection and emits it to the signaling server.
- * @param {RTCIceCandidate} candidate - The ICE candidate received from the signaling server.
- * @param {string} otherPeerId - The ID of the other peer in the peer connection.
- */
-const onIceCandidate = (event, otherPeerId) => {
-    if (event.candidate) {
-        socket.emit('candidate', event.candidate, otherPeerId);
-    }
-};
-
-/**
  * Initializes the WebRTC peer connection and sets up event handlers for handling ICE candidates and incoming tracks.
  * The `peerConnection` object is exported for use in other parts of the application.
  */
 export const handlePeerOffer = (offer, senderPeerId) => {
     console.log('Received offer from peer:', senderPeerId);
+
     // Create a new RTCPeerConnection object
     peerConnections[senderPeerId] = new RTCPeerConnection();
-
-    // Set up event handlers for handling ICE candidates
-    peerConnections[senderPeerId].onicecandidate = e => onIceCandidate(e, senderPeerId);
-
-    // Set up event handler for handling incoming tracks
-    peerConnections[senderPeerId].ontrack = handleBroadcastingStarted;
 
     // Set the remote description of the peer connection to the received offer
     peerConnections[senderPeerId].setRemoteDescription(new RTCSessionDescription(offer))
         .then(() => {
             peerConnections[senderPeerId].createAnswer()
                 .then(answer => {
+                    console.log('Answer created for peer:', senderPeerId);
                     peerConnections[senderPeerId].setLocalDescription(answer);
                     socket.emit('answer', answer, senderPeerId);
                 });
         });
+
+    // Setup connection
+    _setupConnection(senderPeerId);
 };
 
 /**
@@ -68,10 +54,11 @@ export const handlePeerAnswer = (answer, peerId) => {
  * Handles the receipt of an ICE candidate from the signaling server.
  * Adds the received ICE candidate to the peer connection.
  * @param {RTCIceCandidate} candidate - The ICE candidate received from the signaling server.
- * @param {string} peerId - The ID of the peer that sent the ICE candidate.
+ * @param {string} senderPeerId - The ID of the peer that sent the ICE candidate.
  */
-export const handlePeerCandidate = (candidate, peerId) => {
-    peerConnections[peerId].addIceCandidate(new RTCIceCandidate(candidate));
+export const handlePeerCandidate = (candidate, senderPeerId) => {
+    console.log('ICE candidate received from:', senderPeerId);
+    peerConnections[senderPeerId].addIceCandidate(new RTCIceCandidate(candidate));
 };
 
 
@@ -80,27 +67,33 @@ export const handlePeerCandidate = (candidate, peerId) => {
  *******************************************************************/
 
 /**
- * Initializes the WebRTC peer connection by setting up an event handler for handling ICE candidates.
- * This function is exported for use in other parts of the application.
+ * Log the peer Id assigned to this client.
  */
 export const handleReadySocketConnection = (newLocalPeerId) => {
+    // Set the local peer ID
     localPeerId = newLocalPeerId;
     console.log('Client peer id:', newLocalPeerId);
-    localConnection.onicecandidate = (e) => onIceCandidate(e, newLocalPeerId);
 };
 
 /**
  * Handles the connection of a new peer by creating a new peer connection.
  * @param {string} peerId - The ID of the connected peer.
  */
-export const handlePeerConnected = (peerId) => {
+export const handlePeerConnected = (peerId, broadcasterId) => {
     console.log('Peer connected:', peerId);
+    // Create a new RTCPeerConnection object
+    peerConnections[peerId] = new RTCPeerConnection();
+
     // Send an offer to the new peer
-    localConnection.createOffer()
-        .then(offer => {
-            localConnection.setLocalDescription(offer);
-            socket.emit('offer', offer, peerId);
-        });
+    _createOffer(peerId);
+
+    // Setup connection
+    _setupConnection(peerId);
+
+    // If this is the broadcaster, start broadcasting
+    if (broadcasterId === localPeerId) {
+        _startBroadcasting();
+    }
 };
 
 /**
@@ -129,7 +122,7 @@ export const handleBroadcastingStarted = (event) => {
     if (event) {
         console.log('Broadcasting started', event);
         // Attach the stream to the video element
-        const video = document.getElementById('video');
+        const video = document.getElementById('remoteVideo');
         video.srcObject = event.streams[0];
         // Update the UI
         requestStatusUpdate();
@@ -140,16 +133,17 @@ export const handleBroadcastingStarted = (event) => {
  * Stops the active video stream and broadcasting.
  */
 export const handleBroadcastingStopped = () => {
-    // Detach the stream from the video element
-    const video = document.getElementById('video');
-    video.srcObject?.getTracks().forEach((track) => track.stop());
-    video.srcObject = null;
-    // Remove tracks for all peer connections
-    Object.values(peerConnections).forEach(peerConnection => {
-        peerConnection.getSenders().forEach(sender => sender.track.stop());
-    });
-    // Update the UI
-    requestStatusUpdate();
+    // Viewer stop watching
+    console.log('Viewer: broadcasting stopped');
+    const remoteVideo = document.getElementById('remoteVideo');
+    if (remoteVideo.srcObject) {
+        // Detach the stream from the video element
+        remoteVideo.exitFullscreen();
+        remoteVideo.srcObject.getTracks().forEach((track) => track.stop());
+        remoteVideo.srcObject = null;
+        // Update the UI
+        requestStatusUpdate();
+    }
 };
 
 /**
@@ -158,24 +152,34 @@ export const handleBroadcastingStopped = () => {
  * then updates the UI to reflect the broadcasting state.
  */
 export const handleBroadcastAccepted = () => {
-    navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
-      .then(stream => {
-            // Add the tracks to the all peer connections
-            let i = 0;
-            Object.values(peerConnections).forEach(peerConnection => {
-                console.log('Adding tracks to peer connection', peerConnections[i++]);
-                stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+    // If this is the broadcaster, start broadcasting to the new peer
+    _startBroadcasting();
+};
 
-                const video = document.getElementById('video');
-                video.srcObject = stream;
+/**
+ * Stops the active video broadcast by removing the tracks from the peer connection,
+ * detaching the stream from the local video element, and emitting a 'stop-broadcasting'
+ * message to the server. This function also updates the UI to reflect the broadcasting state.
+ */
+export const stopBroadcastingVideo = () => {
+    console.log('Stop broadcasting video');
 
-                stream.oninactivate = () => {
-                    socket.emit('stop-broadcasting');
-                };
-                // Update the UI
-                requestStatusUpdate();
-            });
+    // Remove tracks from all the peer connections
+    Object.entries(peerConnections).forEach(([peerId, peerConnection]) => {
+        peerConnection.getSenders().forEach(sender => {
+            sender.track.stop();
+            peerConnection.removeTrack(sender);
         });
+    });
+
+    // Detach the stream from the video element
+    const localVideo = document.getElementById('localVideo');
+    localVideo.srcObject?.getTracks().forEach((track) => track.stop());
+    localVideo.srcObject = null;
+    // Stop broadcasting message
+    socket.emit('stop-broadcasting');
+    // Update the UI
+    requestStatusUpdate();
 };
 
 /**
@@ -188,3 +192,80 @@ export const handleBroadcastRejected = () => {
 };
 
 
+/*******************************************************************
+ *                   Helper functions
+ *******************************************************************/
+
+const _createOffer = (peerId) => {
+    // Create an offer for the peer connection
+    peerConnections[peerId].createOffer()
+        .then(offer => {
+            console.log('Offer created for peer:', peerId);
+            peerConnections[peerId].setLocalDescription(offer);
+            socket.emit('offer', offer, peerId);
+        });
+};
+
+const _setupConnection = (peerId) => {
+    // Set up event handlers for handling ICE candidates
+    peerConnections[peerId].onicecandidate = event => {
+        console.log('Received ICE candidate from :', peerId);
+        if (event.candidate) {
+            socket.emit('candidate', event.candidate, peerId);
+        }
+    };
+
+    // Log ICE connection state changes
+    peerConnections[peerId].oniceconnectionstatechange = () => {
+        console.log('ICE Connection State Change:', peerConnections[peerId].iceConnectionState);
+        if (peerConnections[peerId].iceConnectionState === 'failed') {
+            console.error('ICE Connection Failed:', peerId);
+            peerConnections[peerId].restartIce();
+        } else if (peerConnections[peerId].iceConnectionState === 'disconnected') {
+            console.error('ICE Connection Disconnected:', peerId);
+            peerConnections[peerId].restartIce();
+        }
+    };
+
+    // Log signaling state changes
+    peerConnections[peerId].onsignalingstatechange = () => {
+        console.log('Signaling State Change:', peerConnections[peerId].signalingState);
+    };
+
+    // Log connection state changes
+    peerConnections[peerId].onconnectionstatechange = () => {
+        console.log('Connection State Change:', peerConnections[peerId].connectionState);
+    };
+
+    // Set up event handler for handling incoming tracks
+    peerConnections[peerId].ontrack = handleBroadcastingStarted;
+
+    // Set up event handler for handling negotiation needed
+    peerConnections[peerId].onnegotiationneeded = () => _createOffer(peerId);
+};
+
+const _startBroadcasting = async () => {
+    // If a stream is already being broadcasted use it
+    const localVideo = document.getElementById('localVideo');
+    // TODO: change this to screen share
+    const stream = localVideo.srcObject ?? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+
+    stream.getTracks().forEach(track => {
+        // If the track ended, stop broadcasting
+        track.onended = () => stopBroadcastingVideo();
+
+        // Remove and re-add all tracks to all peer connections
+        Object.entries(peerConnections).forEach(([peerId, peerConnection]) => {
+            console.log('Adding tracks to peer connection', peerId);
+            peerConnection.addTrack(track, stream);
+        });
+    });
+
+    // Set the stream to the local video element
+    if (!document.getElementById('localVideo').srcObject) {
+        document.getElementById('localVideo').srcObject = stream;
+    }
+
+    // Update the UI
+    requestStatusUpdate();
+};

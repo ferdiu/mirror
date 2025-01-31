@@ -10,10 +10,11 @@ export const handleStatusUpdate = (status) => {
 
     const startButton = document.getElementById('start-stream');
     const stopButton = document.getElementById('stop-stream');
-    const video = document.getElementById('video');
-
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
 
     startButton.style.display = status === 'idle' ? 'block' : 'none';
     stopButton.style.display = status === 'broadcasting' ? 'block' : 'none';
-    video.style.display = status === 'idle' ? 'none' : 'block';
+    localVideo.style.display = status === 'broadcasting' ? 'block' : 'none';
+    remoteVideo.style.display = status === 'viewing' ? 'block' : 'none';
 };

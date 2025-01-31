@@ -8,7 +8,8 @@ import {
     handleBroadcastingStarted,
     handleBroadcastingStopped,
     handleBroadcastAccepted,
-    handleBroadcastRejected } from './peer.connection.handler.js';
+    handleBroadcastRejected,
+    stopBroadcastingVideo } from './peer.connection.handler.js';
 import { handleStatusUpdate } from './ui.update.handler.js';
 import { io } from "./generated/socket.io.js";
 
@@ -53,7 +54,7 @@ export const startStreaming = () => {
  * Stops the current broadcast by sending a stop broadcast signal to the signaling server and updating the UI.
  */
 export const stopStreaming = () => {
-    handleBroadcastingStopped();
+    stopBroadcastingVideo();
     socket.emit('stop-broadcast');
 };
 
