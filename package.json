@@ -3,8 +3,7 @@
   "version": "0.0.1",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "ts-node src/app.ts",
+    "start": "node dist/app.js",
     "build": "tsc",
     "dev": "nodemon --watch src --exec ts-node src/app.ts",
     "postinstall": "mkdir -p public/js/generated && cp node_modules/socket.io-client/dist/socket.io.esm.min.js public/js/generated/socket.io.js"
