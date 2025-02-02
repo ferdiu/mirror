@@ -124,6 +124,7 @@ export const handleBroadcastingStarted = (event) => {
         // Attach the stream to the video element
         const video = document.getElementById('remoteVideo');
         video.srcObject = event.streams[0];
+        video.parentElement.classList.add('full-window');
         // Update the UI
         requestStatusUpdate();
     }
@@ -141,6 +142,7 @@ export const handleBroadcastingStopped = () => {
         remoteVideo.exitFullscreen();
         remoteVideo.srcObject.getTracks().forEach((track) => track.stop());
         remoteVideo.srcObject = null;
+        remoteVideo.parentElement.classList.replace('full-window', '');
         // Update the UI
         requestStatusUpdate();
     }
@@ -247,7 +249,6 @@ const _setupConnection = (peerId) => {
 const _startBroadcasting = async () => {
     // If a stream is already being broadcasted use it
     const localVideo = document.getElementById('localVideo');
-    // TODO: change this to screen share
     const stream = localVideo.srcObject ?? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
 
     stream.getTracks().forEach(track => {
