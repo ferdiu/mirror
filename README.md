@@ -70,4 +70,4 @@ Any contributions are welcome. Please open an issue or a pull request.
 - [ ] make the client more smart by not just reloading the page after closing the screen sharing
 - [ ] add support for the "stop sharing" button provided by the browser
 - [ ] add light mode
-- [ ] add a beautiful background (see (ferdiu.it)[https://ferdiu.it])
+- [ ] add a beautiful background (see [ferdiu.it](https://ferdiu.it))
