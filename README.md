@@ -13,6 +13,12 @@ _Mirror_ is a simple server that provides the possibility to mirror any device s
 
 ## ⚙️ Installation
 
+Before starting with the installation genereta certificates: this is needed due to most modern policy of not giving access to the media devices in HTTP connections. This step can not be skipped!
+
+```bash
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem
+```
+
 ### 🐳 Docker
 
 You can build your own docker image with the following command:

@@ -140,3 +140,6 @@ dist
 
 # ignore generated client files
 public/js/generated
+
+# Igonre certificate files
+*.pem
