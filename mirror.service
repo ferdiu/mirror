@@ -1,0 +1,15 @@
+[Unit]
+Description=ACLAI Mirror
+After=network.target
+
+[Service]
+Environment=NODE_ENV=production
+WorkingDirectory=/opt/mirror
+ExecStart=/usr/bin/npm run start
+Restart=always
+User=aclai
+Group=aclai
+LimitNOFILE=50000
+
+[Install]
+WantedBy=multi-user.target
