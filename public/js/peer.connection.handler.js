@@ -139,10 +139,12 @@ export const handleBroadcastingStopped = () => {
     const remoteVideo = document.getElementById('remoteVideo');
     if (remoteVideo.srcObject) {
         // Detach the stream from the video element
-        remoteVideo.exitFullscreen();
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        }
         remoteVideo.srcObject.getTracks().forEach((track) => track.stop());
         remoteVideo.srcObject = null;
-        remoteVideo.parentElement.classList.replace('full-window', '');
+        remoteVideo.parentElement.classList.remove('full-window');
         // Update the UI
         requestStatusUpdate();
     }
