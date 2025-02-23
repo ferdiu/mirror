@@ -1,6 +1,6 @@
 {
   "name": "webrtc-ferdiuais",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "server.js",
   "scripts": {
     "start": "node dist/app.js",
@@ -9,7 +9,7 @@
     "postinstall": "mkdir -p public/js/generated && cp node_modules/socket.io-client/dist/socket.io.esm.min.js public/js/generated/socket.io.js"
   },
   "author": "",
-  "license": "ISC",
+  "license": "GPL-3.0",
   "description": "",
   "dependencies": {
     "express": "^4.21.2",
