@@ -1,0 +1,137 @@
+name: Build & Release Mirror Container
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Git tag to build (e.g. v1.2.3)"
+        required: true
+
+env:
+  IMAGE_NAME: ghcr.io/ferdiu/mirror
+
+jobs:
+  build:
+    name: Build & Push Container
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # Resolve tag (push or manual)
+      - name: Resolve tag
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+
+          # strip leading v for version tag
+          VERSION="${TAG#v}"
+
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Get previous tag for changelog
+      - name: Get previous tag
+        id: prev
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 ${GITHUB_REF_NAME}^ 2>/dev/null || echo "")
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+
+      # Generate changelog
+      - name: Generate changelog
+        id: changelog
+        run: |
+          if [ -z "${{ steps.prev.outputs.prev_tag }}" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s" $GITHUB_REF_NAME)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" ${{ steps.prev.outputs.prev_tag }}..$GITHUB_REF_NAME)
+          fi
+
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # Docker metadata
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.vars.outputs.version }}
+            type=raw,value=latest
+
+          labels: |
+            org.opencontainers.image.title=mirror
+            org.opencontainers.image.version=${{ steps.vars.outputs.version }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      # Build & push
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+
+      # Create GitHub Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: ${{ steps.vars.outputs.tag }}
+          body: |
+            ## Changes
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## Container Images
+
+            - `ghcr.io/ferdiu/mirror:${{ steps.vars.outputs.version }}`
+            - `ghcr.io/ferdiu/mirror:latest`
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Optional: summary in Actions UI
+      - name: Job Summary
+        run: |
+          echo "### Mirror Release Built 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Tag: ${{ steps.vars.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Version: ${{ steps.vars.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Image: ghcr.io/ferdiu/mirror:${{ steps.vars.outputs.version }}" >> $GITHUB_STEP_SUMMARY

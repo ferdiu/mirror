@@ -2,45 +2,30 @@
 # Stage 1: build
 FROM node:current-alpine AS build
 
-# Set environment variables
-ENV NODE_ENV=production
-
-# Set working directory
 WORKDIR /app
 
-# Copy package files first to leverage Docker cache
 COPY package*.json tsconfig.json ./
+RUN npm install
 
-# Install dependencies
-RUN npm install && npm cache clean --force
-
-# Copy the rest of the application files
 COPY . .
-
-# Build the TypeScript code
 RUN npm run build
 
+
 ######################################################
-# Stage 2: Production image
+# Stage 2: production (Node runtime only)
 FROM node:current-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Set environment variables
 ENV NODE_ENV=production
+ENV HTTP_PORT=3000
 
-# Copy package files first to leverage Docker cache
 COPY package*.json ./
+RUN npm install --omit=dev && npm cache clean --force
 
-# Install dependencies
-RUN npm install --only=production && npm cache clean --force
-
-# Copy public dir
+COPY --from=build /app/dist ./dist
 COPY public ./public
 
-# Copy the rest of the application files from the build stage
-COPY --from=build /app/dist ./dist
+EXPOSE 3000
 
-# Command to run the application
 CMD ["node", "dist/app.js"]

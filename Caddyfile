@@ -1,0 +1,21 @@
+localhost {
+
+  # Enable compression + logs (optional but useful)
+  encode gzip
+
+  # Reverse proxy EVERYTHING to Node
+  # (Socket.IO + API + static fallback)
+  reverse_proxy mirror:3000 {
+    header_up Host {host}
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Proto {scheme}
+  }
+
+  # Optional: security headers
+  header {
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "no-referrer-when-downgrade"
+  }
+}

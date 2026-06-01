@@ -1,31 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <link rel="stylesheet" href="./css/style.css">
-  <script type="module" src="./js/main.js"></script>
-  <title>Mirror</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="./css/style.css">
+    <script type="module" src="./js/main.js"></script>
+    <title>Mirror</title>
 </head>
+
 <body>
-  <div class="container black-shadow">
-    <img src="./aclai-ferdiu.svg" alt="aclai-logo" style="max-width: 512px;">
-    <br>
-    <span class="title">MIRROR</span>
-  </div>
-  <div class="container">
-      <video id="localVideo" autoplay muted style="display: none;"></video>
-      <video id="remoteVideo" autoplay muted style="display: none;"></video>
-  </div>
-  <div class="container">
-    <button id="start-stream" class="button center">Start Mirroring</button>
-    <button id="stop-stream" class="button center" style="display: none;">Stop Mirroring</button>
-  </div>
-  <div class="foot black-shadow" style="color: darkgray;">
-    Powered by
-    <br>
-    <a href="https://ferdiu.it"><img src="./ferdiu-logo-text.svg" alt="ferdiu-logo" style="max-width: 180px;"></a>
-  </div>
-  </body>
+    <div class="container">
+        <video id="localVideo" autoplay muted style="display: none;"></video>
+        <video id="remoteVideo" autoplay muted style="display: none;"></video>
+    </div>
+    <div class="container">
+        <button id="start-stream" class="button center">Start Mirroring</button>
+        <button id="stop-stream" class="button center" style="display: none;">Stop Mirroring</button>
+    </div>
+    <div class="foot black-shadow" style="color: darkgray;">
+        <div>
+            <p>Powered by</p>
+            <p>
+                <a href="https://ferdiu.it"><img src="./ferdiu-logo-text.svg" alt="ferdiu-logo"
+                        style="max-width: 100px;"></a>
+            </p>
+        </div>
+    </div>
+</body>
+
 </html>

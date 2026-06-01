@@ -15,11 +15,6 @@ body {
     text-align: center;
 }
 
-.title {
-    font-size: 24px;
-    margin-bottom: 20px;
-}
-
 video {
     width: 80%;
     max-width: 600px;
@@ -37,10 +32,6 @@ video {
     font-size: xx-large;
 }
 
-.button.center {
-    margin-top: 25%;
-}
-
 .button:disabled {
     background-color: #aaa;
     cursor: not-allowed;
@@ -55,13 +46,19 @@ video {
 }
 
 .foot {
+    text-align: center;
     position: fixed;
     bottom: 0;
-    right: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     color: #fff;
-    text-align: right;
-    font-size: 15px;
-    padding: 3rem;
+    font-size: 8px;
+    padding: 0;
+    padding-bottom: 3rem;
 }
 
 .full-window {
@@ -73,7 +70,7 @@ video {
     z-index: 1000;
 }
 
-.full-window > video {
+.full-window>video {
     width: 100%;
     height: 100%;
     object-fit: cover;

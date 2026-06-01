@@ -25,7 +25,7 @@ export class PeerService {
    */
   addPeer(peerId: string, socket: Socket) {
     this.peers[peerId] = socket;
-    console.log(`Peer connected: ${peerId}`);
+    console.debug(`Peer connected: ${peerId}`);
   }
 
   /**
@@ -33,7 +33,7 @@ export class PeerService {
    * @param peerId - The ID of the peer to remove.
    */
   removePeer(peerId: string) {
-    console.log(`Peer disconnected: ${peerId}`);
+    console.debug(`Peer disconnected: ${peerId}`);
     delete this.peers[peerId];
   }
 

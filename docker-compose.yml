@@ -1,0 +1,19 @@
+services:
+  mirror:
+    build: .
+    volumes:
+      - shared-public:/app/public:ro,z
+
+  caddy:
+    image: caddy:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - shared-public:/srv:ro,z
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
+    depends_on:
+      - mirror
+
+volumes:
+  shared-public:
