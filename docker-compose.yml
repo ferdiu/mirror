@@ -1,5 +1,6 @@
 services:
   mirror:
+    image: ghcr.io/ferdiu/mirror:latest
     build: .
     volumes:
       - shared-public:/app/public:ro,z
